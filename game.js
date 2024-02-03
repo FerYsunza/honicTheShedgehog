@@ -10,67 +10,113 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const player = {
-        x: 50,
-        y: canvas.height / 2,
-        radius: 20,
-        gravity: 0.8,
-        lift: -15,
-        velocity: 0,
-    };
-
     let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    function generateSound(frequency, type) {
-        let oscillator = audioContext.createOscillator();
-        let gainNode = audioContext.createGain();
+    // Honic the Shedgehog properties
+    const honic = {
+        x: 50, // Honic starts running from the left
+        y: 0, // Updated dynamically based on landscape
+        radius: 20,
+        speed: 2, // Honic's running speed
+    };
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+    honic.y = canvas.height - (canvas.height / 3) - honic.radius; // Initial Y position based on landscape
 
-        oscillator.type = type;
-        oscillator.frequency.value = frequency;
-        gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 1);
+    // Landscape properties
+    const landscape = {
+        amplitude: 20, // Height of the waves
+        frequency: 0.05, // How frequent the waves are
+        speed: 2, // Speed of the landscape movement to match Honic's running
+    };
 
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 1);
+    // Rings properties
+    let rings = [];
+    const ringRadius = 10;
+    const ringSpacing = 300; // Distance between rings
+    let ringIndex = 0;
+
+    function generateRings() {
+        for (let i = 0; i < 5; i++) { // Generate 5 rings initially
+            rings.push({
+                x: canvas.width + (ringSpacing * i),
+                y: canvas.height - (canvas.height / 4),
+                radius: ringRadius,
+                collected: false,
+            });
+        }
     }
 
-    function drawPlayer() {
+    generateRings(); // Initial ring generation
+
+    function generateSound(frequency, type) {
+        // Sound generation logic remains the same
+    }
+
+    function drawLandscape() {
+        ctx.fillStyle = '#228B22'; // Dark green for the grass
+        ctx.beginPath();
+        for (let x = 0; x <= canvas.width; x++) {
+            const y = canvas.height - (canvas.height / 3) + Math.sin(x * landscape.frequency + ringIndex) * landscape.amplitude;
+            ctx.lineTo(x, y);
+        }
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(0, canvas.height);
+        ctx.fill();
+    }
+
+    function drawHonic() {
         ctx.fillStyle = 'blue';
         ctx.beginPath();
-        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+        ctx.arc(honic.x, honic.y, honic.radius, 0, Math.PI * 2);
         ctx.fill();
+    }
+
+    function drawRings() {
+        rings.forEach(ring => {
+            if (!ring.collected) {
+                ctx.fillStyle = 'yellow';
+                ctx.beginPath();
+                ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+    }
+
+    function collectRing() {
+        rings.forEach(ring => {
+            let dx = ring.x - honic.x;
+            let dy = ring.y - honic.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < honic.radius + ring.radius && !ring.collected) {
+                ring.collected = true;
+                generateSound(523.25, 'sine'); // Play a different sound for ring collection
+            }
+        });
     }
 
     function updateGame() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        player.velocity += player.gravity;
-        player.y += player.velocity;
+        drawLandscape();
 
-        if (player.y >= canvas.height - player.radius) {
-            player.y = canvas.height - player.radius;
-            player.velocity = 0;
-        }
+        // Update ring positions and check for collection
+        rings.forEach((ring, index) => {
+            if (ring.x + ring.radius < 0) {
+                rings[index] = { // Recycle rings
+                    x: canvas.width + ringRadius,
+                    y: canvas.height - (canvas.height / 4),
+                    radius: ringRadius,
+                    collected: false,
+                };
+            }
+            ring.x -= landscape.speed; // Move rings with the landscape
+        });
 
-        drawPlayer();
+        collectRing();
+        drawRings();
+        drawHonic();
+
+        ringIndex += landscape.speed; // Increment for landscape movement
         requestAnimationFrame(updateGame);
-    }
-
-    window.addEventListener('keydown', (e) => {
-        if (e.code === "Space") {
-            jump();
-        }
-    });
-
-    window.addEventListener('touchstart', jump);
-
-    function jump() {
-        if (player.y === canvas.height - player.radius) {
-            player.velocity += player.lift;
-            generateSound(440, 'square'); // Jump sound
-        }
     }
 
     updateGame();
