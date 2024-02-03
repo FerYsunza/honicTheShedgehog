@@ -12,13 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // Honic properties
+    // Honic properties - Adjusted for higher jumps
     const honic = {
         x: 50,
         y: 0, // Set dynamically based on the landscape
         radius: 20,
         gravity: 0.8,
-        lift: -12,
+        lift: -18, // Increased lift for higher jumps
         velocity: 0,
         onGround: true,
     };
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         speed: 2,
     };
 
-    // Rings
+    // Rings - adjusted positioning to be reachable
     let rings = [];
     const ringRadius = 10;
     const ringSpacing = 300;
@@ -41,8 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function generateRings() {
         for (let i = 0; i < 5; i++) {
             rings.push({
-                x: canvas.width + (ringSpacing * i),
-                y: canvas.height - (canvas.height / 4) + (Math.random() * 50 - 25), // Slightly vary the Y position
+                x: canvas.width + (i * ringSpacing),
+                // Y position adjusted to be within Honic's jump reach
+                y: canvas.height - (canvas.height / 3) - 150 - (Math.random() * 100),
                 radius: ringRadius,
                 collected: false,
             });
@@ -138,14 +139,14 @@ document.addEventListener('DOMContentLoaded', () => {
         collectRing();
         drawRings();
 
-        rings = rings.map(ring => ({
-            ...ring,
-            x: ring.x - landscape.speed
-        })).filter(ring => !ring.collected || ring.x + ring.radius > 0);
-
-        if (rings.length < 5 || rings[rings.length - 1].x < canvas.width - ringSpacing) {
-            generateRings();
-        }
+        rings.forEach((ring, index) => {
+            ring.x -= landscape.speed; // Move rings with the landscape
+            if (ring.x + ring.radius < 0) { // Recycle rings that move off screen
+                rings.splice(index, 1);
+                // Generate a new ring to replace the one that was removed
+                generateRings();
+            }
+        });
 
         ringIndex += landscape.speed;
         requestAnimationFrame(updateGame);
