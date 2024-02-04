@@ -10,9 +10,9 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.initCanvas();
-        this.honic = new Honic(this.canvas);
+        this.honic = new Honic(this.canvas, () => this.generateSound(440, 'square')); // Jumping sound callback
         this.landscape = new Landscape(this.canvas);
-        this.rings = new RingManager(this.canvas, this.honic);
+        this.rings = new RingManager(this.canvas, this.honic, () => this.generateSound(523.25, 'sine')); // Ring collection sound callback
         this.addEventListeners();
         this.update();
     }
@@ -49,14 +49,15 @@ class Game {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.landscape.draw(this.ctx);
         this.honic.update(this.ctx);
-        this.rings.update(this.ctx, () => this.generateSound(523.25, 'sine'));
+        this.rings.update(this.ctx);
         requestAnimationFrame(() => this.update());
     }
 }
 
 class Honic {
-    constructor(canvas) {
+    constructor(canvas, jumpSoundCallback) {
         this.canvas = canvas;
+        this.jumpSoundCallback = jumpSoundCallback;
         this.x = 50;
         this.y = this.canvas.height - (this.canvas.height / 3) - 20; // Set dynamically based on the landscape
         this.radius = 20;
@@ -70,6 +71,7 @@ class Honic {
         if (this.onGround) {
             this.velocity = this.lift;
             this.onGround = false;
+            this.jumpSoundCallback(); // Play jump sound
         }
     }
 
@@ -117,9 +119,10 @@ class Landscape {
 }
 
 class RingManager {
-    constructor(canvas, honic) {
+    constructor(canvas, honic, collectSoundCallback) {
         this.canvas = canvas;
         this.honic = honic;
+        this.collectSoundCallback = collectSoundCallback;
         this.rings = [];
         this.populateRings();
     }
@@ -135,16 +138,16 @@ class RingManager {
         }
     }
 
-    update(ctx, collectSoundCallback) {
-        this.rings = this.rings.filter(ring => {
-            if (!ring.collected && this.checkCollision(ring, this.honic)) {
-                collectSoundCallback();
-                return false;
+    update(ctx) {
+        this.rings.forEach(ring => {
+            if (!ring.collected && this.checkCollision(ring)) {
+                ring.collected = true;
+                this.collectSoundCallback();
             }
-            return true;
         });
-        this.draw(ctx);
+
         this.shiftRings();
+        this.draw(ctx);
     }
 
     draw(ctx) {
@@ -158,16 +161,17 @@ class RingManager {
         });
     }
 
-    checkCollision(ring, honic) {
-        let dx = ring.x - honic.x;
-        let dy = ring.y - honic.y;
+    checkCollision(ring) {
+        let dx = ring.x - this.honic.x;
+        let dy = ring.y - this.honic.y;
         let distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < honic.radius + ring.radius;
+        return distance < this.honic.radius + ring.radius;
     }
 
     shiftRings() {
-        this.rings.forEach(ring => ring.x -= this.canvas.width * 0.005);
-        if (this.rings[this.rings.length - 1].x < this.canvas.width - 300) {
+        this.rings.forEach(ring => ring.x -= this.canvas.width * 0.005); // Move rings left to simulate Honic moving forward
+        // Check if new rings need to be added
+        if (this.rings.length < 5 || this.rings[this.rings.length - 1].x < this.canvas.width - 300) {
             this.populateRings();
         }
     }
