@@ -62,7 +62,7 @@ class Honic {
         this.jumpSoundCallback = jumpSoundCallback;
         this.x = 50;
         this.y = this.canvas.height - (this.canvas.height / 3) - 20;
-        this.radius = 20;
+        this.radius = 20; // Honic's body radius
         this.gravity = 0.8;
         this.lift = -18;
         this.velocity = 0;
@@ -90,12 +90,27 @@ class Honic {
     }
 
     draw(ctx) {
+        // Body
         ctx.fillStyle = 'blue';
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
+
+        // Eye
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x + this.radius / 2, this.y - this.radius / 2, this.radius / 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Shoe
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        // Drawing the shoe as a half-ellipse
+        ctx.ellipse(this.x, this.y + this.radius - 5, this.radius / 2, this.radius / 4, 0, 0, Math.PI);
+        ctx.fill();
     }
 }
+
 
 class Landscape {
     constructor(canvas) {
