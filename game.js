@@ -217,7 +217,7 @@ class Game {
     }
   
     update() {
-      const speedIncrease = this.canvas.width * 0.007;
+      const speedIncrease = this.canvas.width * 0.021;
   
       this.rings = this.rings.filter(ring => {
         if (!ring.collected && this.checkCollision(ring)) {
