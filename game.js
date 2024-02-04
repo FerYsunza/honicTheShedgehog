@@ -87,7 +87,7 @@ class Honic {
             this.velocity = 0;
             this.onGround = true;
         }
-        this.rotationAngle += 0; // Increment the angle for the spinning effect
+        this.rotationAngle += 0.6; // Increment the angle for the spinning effect
         this.draw(ctx);
     }
 
@@ -145,7 +145,7 @@ class Honic {
 
     drawEye(ctx) {
         // Bigger Eye
-        const eyeRadius = this.radius / 3; // Increase the eye size
+        const eyeRadius = this.radius / 3; // Maintain the increased eye size
         const eyeX = this.x + this.radius / 2;
         const eyeY = this.y - this.radius / 2;
         
@@ -155,11 +155,24 @@ class Honic {
         ctx.fill();
         
         // Pupil
-        const pupilRadius = eyeRadius / 2; // Size of the pupil relative to the eye size
+        const pupilRadius = eyeRadius / 2; // Maintain the pupil size relative to the eye size
         ctx.fillStyle = 'black';
         ctx.beginPath();
         ctx.arc(eyeX + 2, eyeY, pupilRadius, 0, Math.PI * 2);
         ctx.fill();
+
+        // Adjusted Eyebrow for Length
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2; // Maintain the eyebrow thickness
+        ctx.beginPath();
+        // Extend the starting point further to the right for a longer eyebrow
+        const eyebrowStartX = eyeX + eyeRadius * 0.6; // Extend starting point to the right for length
+        const eyebrowStartY = eyeY - eyeRadius * 0.8; // Maintain starting point height
+        const eyebrowEndX = eyeX - eyeRadius * 0.2; // Extend ending point further left for length
+        const eyebrowEndY = eyeY - eyeRadius * 1.1; // Maintain ending point height
+        ctx.moveTo(eyebrowStartX, eyebrowStartY);
+        ctx.lineTo(eyebrowEndX, eyebrowEndY);
+        ctx.stroke();
     }
 
     drawShoe(ctx) {
