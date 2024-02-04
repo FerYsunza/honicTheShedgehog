@@ -10,9 +10,9 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.initCanvas();
-        this.honic = new Honic(this.canvas, () => this.generateSound(440, 'square')); // Jumping sound callback
+        this.honic = new Honic(this.canvas, () => this.generateSound('sine', { frequency: 784.00, startGain: 0.7, endGain: 0.1, duration: 0.5 })); // Boing sound for jumping
         this.landscape = new Landscape(this.canvas);
-        this.rings = new RingManager(this.canvas, this.honic, () => this.generateSound(523.25, 'sine')); // Ring collection sound callback
+        this.rings = new RingManager(this.canvas, this.honic, () => this.generateSound('triangle', { frequency: 2093, startGain: 0.5, endGain: 0.01, duration: 0.3 })); // Pling sound for ring collection
         this.addEventListeners();
         this.update();
     }
@@ -32,17 +32,19 @@ class Game {
         window.addEventListener('touchstart', () => this.honic.jump());
     }
 
-    generateSound(frequency, type) {
+    generateSound(type, options) {
         let oscillator = this.audioContext.createOscillator();
         let gainNode = this.audioContext.createGain();
         oscillator.connect(gainNode);
         gainNode.connect(this.audioContext.destination);
         oscillator.type = type;
-        oscillator.frequency.value = frequency;
-        gainNode.gain.setValueAtTime(gainNode.gain.value, this.audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, this.audioContext.currentTime + 1);
+        if (options.frequency) {
+            oscillator.frequency.value = options.frequency;
+        }
+        gainNode.gain.setValueAtTime(options.startGain || 1, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(options.endGain || 0.001, this.audioContext.currentTime + (options.duration || 1));
         oscillator.start(this.audioContext.currentTime);
-        oscillator.stop(this.audioContext.currentTime + 1);
+        oscillator.stop(this.audioContext.currentTime + (options.duration || 1));
     }
 
     update() {
@@ -59,10 +61,10 @@ class Honic {
         this.canvas = canvas;
         this.jumpSoundCallback = jumpSoundCallback;
         this.x = 50;
-        this.y = this.canvas.height - (this.canvas.height / 3) - 20; // Set dynamically based on the landscape
+        this.y = this.canvas.height - (this.canvas.height / 3) - 20;
         this.radius = 20;
         this.gravity = 0.8;
-        this.lift = -18; // Increased lift for higher jumps
+        this.lift = -18;
         this.velocity = 0;
         this.onGround = true;
     }
@@ -71,7 +73,7 @@ class Honic {
         if (this.onGround) {
             this.velocity = this.lift;
             this.onGround = false;
-            this.jumpSoundCallback(); // Play jump sound
+            this.jumpSoundCallback();
         }
     }
 
@@ -105,7 +107,7 @@ class Landscape {
     }
 
     draw(ctx) {
-        ctx.fillStyle = '#228B22'; // Green color for the grass
+        ctx.fillStyle = '#228B22';
         ctx.beginPath();
         ctx.moveTo(0, this.canvas.height);
         for (let x = 0; x <= this.canvas.width; x++) {
@@ -169,8 +171,7 @@ class RingManager {
     }
 
     shiftRings() {
-        this.rings.forEach(ring => ring.x -= this.canvas.width * 0.005); // Move rings left to simulate Honic moving forward
-        // Check if new rings need to be added
+        this.rings.forEach(ring => ring.x -= this.canvas.width * 0.005);
         if (this.rings.length < 5 || this.rings[this.rings.length - 1].x < this.canvas.width - 300) {
             this.populateRings();
         }
