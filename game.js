@@ -60,13 +60,14 @@ class Honic {
     constructor(canvas, jumpSoundCallback) {
         this.canvas = canvas;
         this.jumpSoundCallback = jumpSoundCallback;
-        this.x = 50;
-        this.y = this.canvas.height - (this.canvas.height / 3) - 20;
-        this.radius = 20; // Honic's body radius
+        this.x = 50; // Starting X position
+        this.y = canvas.height - (canvas.height / 3) - 20; // Adjusted Y position based on canvas height
+        this.radius = 20; // Radius of Honic's body
         this.gravity = 0.8;
         this.lift = -18;
         this.velocity = 0;
         this.onGround = true;
+        this.rotationAngle = 0; // Initial rotation angle for spinning effect
     }
 
     jump() {
@@ -86,30 +87,80 @@ class Honic {
             this.velocity = 0;
             this.onGround = true;
         }
+        this.rotationAngle += 0.2; // Increment the angle for the spinning effect
         this.draw(ctx);
     }
 
     draw(ctx) {
+        ctx.save(); // Save the current state of the canvas
+
+        // Move the rotation origin to Honic's center and rotate
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotationAngle);
+
+        // Move back before drawing Honic
+        ctx.translate(-this.x, -this.y);
+
         // Body
         ctx.fillStyle = 'blue';
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
 
+        this.drawSpikes(ctx); // Draw spikes with consideration for rotation
+        this.drawEye(ctx); // Draw Honic's eye
+        this.drawShoe(ctx); // Draw Honic's shoe
+
+        ctx.restore(); // Restore the canvas state to not affect other drawings
+    }
+
+    drawSpikes(ctx) {
+        const spikeLength = this.radius * 0.6; // Adjusted spike length
+        const numberOfSpikes = 6; // Total number of spikes
+        const startAngle = Math.PI * 0.75; // Start angle for spikes
+        const endAngle = Math.PI * 1.45; // End angle for spikes
+        const angleIncrement = (endAngle - startAngle) / (numberOfSpikes - 1);
+
+        ctx.fillStyle = 'blue';
+        for (let i = 0; i < numberOfSpikes; i++) {
+            const angle = startAngle + (i * angleIncrement);
+
+            const baseWidth = this.radius * 0.2; // Adjusted base width for thicker appearance
+            const base1X = this.x + Math.cos(angle - angleIncrement / 6) * (this.radius - baseWidth / 2);
+            const base1Y = this.y + Math.sin(angle - angleIncrement / 6) * (this.radius - baseWidth / 2);
+            const base2X = this.x + Math.cos(angle + angleIncrement / 6) * (this.radius - baseWidth / 2);
+            const base2Y = this.y + Math.sin(angle + angleIncrement / 6) * (this.radius - baseWidth / 2);
+
+            const tipX = this.x + Math.cos(angle) * (this.radius + spikeLength);
+            const tipY = this.y + Math.sin(angle) * (this.radius + spikeLength);
+
+            ctx.beginPath();
+            ctx.moveTo(base1X, base1Y);
+            ctx.lineTo(tipX, tipY);
+            ctx.lineTo(base2X, base2Y);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    drawEye(ctx) {
         // Eye
         ctx.fillStyle = 'white';
         ctx.beginPath();
         ctx.arc(this.x + this.radius / 2, this.y - this.radius / 2, this.radius / 4, 0, Math.PI * 2);
         ctx.fill();
+    }
 
+    drawShoe(ctx) {
         // Shoe
         ctx.fillStyle = 'red';
         ctx.beginPath();
-        // Drawing the shoe as a half-ellipse
         ctx.ellipse(this.x, this.y + this.radius - 5, this.radius / 2, this.radius / 4, 0, 0, Math.PI);
         ctx.fill();
     }
 }
+
+
 
 
 class Landscape {
