@@ -87,7 +87,7 @@ class Honic {
             this.velocity = 0;
             this.onGround = true;
         }
-        this.rotationAngle += 0.5; // Increment the angle for the spinning effect
+        this.rotationAngle += 0; // Increment the angle for the spinning effect
         this.draw(ctx);
     }
 
@@ -144,10 +144,21 @@ class Honic {
     }
 
     drawEye(ctx) {
-        // Eye
+        // Bigger Eye
+        const eyeRadius = this.radius / 3; // Increase the eye size
+        const eyeX = this.x + this.radius / 2;
+        const eyeY = this.y - this.radius / 2;
+        
         ctx.fillStyle = 'white';
         ctx.beginPath();
-        ctx.arc(this.x + this.radius / 2, this.y - this.radius / 2, this.radius / 4, 0, Math.PI * 2);
+        ctx.arc(eyeX, eyeY, eyeRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Pupil
+        const pupilRadius = eyeRadius / 2; // Size of the pupil relative to the eye size
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(eyeX + 2, eyeY, pupilRadius, 0, Math.PI * 2);
         ctx.fill();
     }
 
