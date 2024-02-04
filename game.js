@@ -6,52 +6,49 @@
 
 class Game {
     constructor(canvasId) {
-      this.canvas = document.getElementById(canvasId);
-      this.ctx = this.canvas.getContext('2d');
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      this.score = 0;
-      this.initCanvas();
-      this.honic = new Honic(this.canvas, () => this.generateSound('sine', { frequency: 784.00, startGain: 0.7, endGain: 0.1, duration: 0.5 }));
-      this.landscape = new Landscape(this.canvas);
-      this.rings = new RingManager(this.canvas, this.honic, () => this.generateSound('triangle', { frequency: 2093, startGain: 0.5, endGain: 0.01, duration: 0.3 }), this);
+      this.init(canvasId);
+      this.initEntities();
       this.addEventListeners();
       this.update();
     }
   
-    initCanvas() {
+    init(canvasId) {
+      this.canvas = document.getElementById(canvasId);
+      this.ctx = this.canvas.getContext('2d');
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.score = 0;
       this.canvas.width = window.innerWidth;
       this.canvas.height = window.innerHeight;
     }
   
+    initEntities() {
+      this.honic = new Honic(this);
+      this.landscape = new Landscape(this.canvas);
+      this.rings = new RingManager(this);
+    }
+  
     addEventListeners() {
-      window.addEventListener('keydown', (e) => {
-        if (e.code === "Space") {
-          this.honic.jump();
-        }
-      });
+      window.addEventListener('keydown', (e) => e.code === "Space" && this.honic.jump());
       window.addEventListener('touchstart', () => this.honic.jump());
     }
   
-    generateSound(type, options) {
+    generateSound(type, { frequency, startGain, endGain, duration }) {
       let oscillator = this.audioContext.createOscillator();
       let gainNode = this.audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(this.audioContext.destination);
+      oscillator.connect(gainNode).connect(this.audioContext.destination);
       oscillator.type = type;
-      if (options.frequency) {
-        oscillator.frequency.value = options.frequency;
-      }
-      gainNode.gain.setValueAtTime(options.startGain || 1, this.audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(options.endGain || 0.001, this.audioContext.currentTime + (options.duration || 1));
-      oscillator.start(this.audioContext.currentTime);
-      oscillator.stop(this.audioContext.currentTime + (options.duration || 1));
+      oscillator.frequency.value = frequency;
+      gainNode.gain.setValueAtTime(startGain, this.audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(endGain, this.audioContext.currentTime + duration);
+      oscillator.start();
+      oscillator.stop(this.audioContext.currentTime + duration);
     }
   
     update() {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.landscape.draw(this.ctx);
-      this.honic.update(this.ctx);
-      this.rings.update(this.ctx);
+      this.honic.update();
+      this.rings.update();
       this.drawScore();
       requestAnimationFrame(() => this.update());
     }
@@ -65,62 +62,59 @@ class Game {
   }
   
   class Honic {
-    constructor(canvas, jumpSoundCallback) {
-      this.canvas = canvas;
-      this.jumpSoundCallback = jumpSoundCallback;
+    constructor(game) {
+      this.game = game;
+      this.canvas = game.canvas;
       this.x = 50;
-      this.y = canvas.height - (canvas.height / 3) - 20;
+      this.y = this.canvas.height - (this.canvas.height / 3) - 20;
       this.radius = 20;
       this.gravity = 0.8;
       this.lift = -18;
       this.velocity = 0;
-      this.onGround = true;
       this.rotationAngle = 0;
     }
   
     jump() {
-      if (this.onGround) {
+      if (this.y >= this.canvas.height - (this.canvas.height / 3) - this.radius) {
         this.velocity = this.lift;
-        this.onGround = false;
-        this.jumpSoundCallback();
+        this.game.generateSound('sine', { frequency: 784.00, startGain: 0.7, endGain: 0.1, duration: 0.5 });
       }
     }
   
-    update(ctx) {
+    update() {
       this.velocity += this.gravity;
       this.y += this.velocity;
-      let groundLevel = this.canvas.height - (this.canvas.height / 3) - this.radius;
-      if (this.y > groundLevel) {
-        this.y = groundLevel;
-        this.velocity = 0;
-        this.onGround = true;
-      }
+      this.y = Math.min(this.y, this.canvas.height - (this.canvas.height / 3) - this.radius);
       this.rotationAngle += 0.6;
-      this.draw(ctx);
+      this.draw();
     }
   
-    draw(ctx) {
-      ctx.save();
-      ctx.translate(this.x, this.y);
-      ctx.rotate(this.rotationAngle);
-      ctx.translate(-this.x, -this.y);
-      ctx.fillStyle = 'blue';
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-      this.drawSpikes(ctx);
-      this.drawEye(ctx);
-      this.drawShoe(ctx);
-      ctx.restore();
+    draw() {
+      this.game.ctx.save();
+      this.game.ctx.translate(this.x, this.y);
+      this.game.ctx.rotate(this.rotationAngle);
+      this.game.ctx.translate(-this.x, -this.y);
+      this.drawBody();
+      this.drawSpikes();
+      this.drawEye();
+      this.drawShoe();
+      this.game.ctx.restore();
     }
   
-    drawSpikes(ctx) {
+    drawBody() {
+      this.game.ctx.fillStyle = 'blue';
+      this.game.ctx.beginPath();
+      this.game.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      this.game.ctx.fill();
+    }
+  
+    drawSpikes() {
       const spikeLength = this.radius * 0.6;
       const numberOfSpikes = 6;
       const startAngle = Math.PI * 0.75;
       const endAngle = Math.PI * 1.45;
       const angleIncrement = (endAngle - startAngle) / (numberOfSpikes - 1);
-      ctx.fillStyle = 'blue';
+      this.game.ctx.fillStyle = 'blue';
       for (let i = 0; i < numberOfSpikes; i++) {
         const angle = startAngle + (i * angleIncrement);
         const baseWidth = this.radius * 0.01;
@@ -130,45 +124,45 @@ class Game {
         const base2Y = this.y + Math.sin(angle + angleIncrement / 6) * (this.radius - baseWidth / 2);
         const tipX = this.x + Math.cos(angle) * (this.radius + spikeLength);
         const tipY = this.y + Math.sin(angle) * (this.radius + spikeLength);
-        ctx.beginPath();
-        ctx.moveTo(base1X, base1Y);
-        ctx.lineTo(tipX, tipY);
-        ctx.lineTo(base2X, base2Y);
-        ctx.closePath();
-        ctx.fill();
+        this.game.ctx.beginPath();
+        this.game.ctx.moveTo(base1X, base1Y);
+        this.game.ctx.lineTo(tipX, tipY);
+        this.game.ctx.lineTo(base2X, base2Y);
+        this.game.ctx.closePath();
+        this.game.ctx.fill();
       }
     }
   
-    drawEye(ctx) {
+    drawEye() {
       const eyeRadius = this.radius / 3;
       const eyeX = this.x + this.radius / 2;
       const eyeY = this.y - this.radius / 2;
-      ctx.fillStyle = 'white';
-      ctx.beginPath();
-      ctx.arc(eyeX, eyeY, eyeRadius, 0, Math.PI * 2);
-      ctx.fill();
+      this.game.ctx.fillStyle = 'white';
+      this.game.ctx.beginPath();
+      this.game.ctx.arc(eyeX, eyeY, eyeRadius, 0, Math.PI * 2);
+      this.game.ctx.fill();
       const pupilRadius = eyeRadius / 2;
-      ctx.fillStyle = 'black';
-      ctx.beginPath();
-      ctx.arc(eyeX + 2, eyeY, pupilRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
+      this.game.ctx.fillStyle = 'black';
+      this.game.ctx.beginPath();
+      this.game.ctx.arc(eyeX + 2, eyeY, pupilRadius, 0, Math.PI * 2);
+      this.game.ctx.fill();
+      this.game.ctx.strokeStyle = 'black';
+      this.game.ctx.lineWidth = 2;
+      this.game.ctx.beginPath();
       const eyebrowStartX = eyeX + eyeRadius * 0.6;
       const eyebrowStartY = eyeY - eyeRadius * 0.8;
       const eyebrowEndX = eyeX - eyeRadius * 0.2;
       const eyebrowEndY = eyeY - eyeRadius * 1.1;
-      ctx.moveTo(eyebrowStartX, eyebrowStartY);
-      ctx.lineTo(eyebrowEndX, eyebrowEndY);
-      ctx.stroke();
+      this.game.ctx.moveTo(eyebrowStartX, eyebrowStartY);
+      this.game.ctx.lineTo(eyebrowEndX, eyebrowEndY);
+      this.game.ctx.stroke();
     }
   
-    drawShoe(ctx) {
-      ctx.fillStyle = 'red';
-      ctx.beginPath();
-      ctx.ellipse(this.x, this.y + this.radius - 5, this.radius / 2, this.radius / 4, 0, 0, Math.PI);
-      ctx.fill();
+    drawShoe() {
+      this.game.ctx.fillStyle = 'red';
+      this.game.ctx.beginPath();
+      this.game.ctx.ellipse(this.x, this.y + this.radius - 5, this.radius / 2, this.radius / 4, 0, 0, Math.PI);
+      this.game.ctx.fill();
     }
   }
   
@@ -196,22 +190,24 @@ class Game {
   }
   
   class RingManager {
-    constructor(canvas, honic, collectSoundCallback, game) {
-      this.canvas = canvas;
-      this.honic = honic;
-      this.collectSoundCallback = collectSoundCallback;
+    constructor(game) {
       this.game = game;
+      this.canvas = game.canvas;
+      this.honic = game.honic;
+      this.collectSoundCallback = () => game.generateSound('triangle', { frequency: 2093, startGain: 0.5, endGain: 0.01, duration: 0.3 });
       this.rings = [];
       this.populateRings();
     }
   
     populateRings() {
-      for (let i = 0; i < 5; i++) {
-        const honicGroundLevel = this.canvas.height - (this.canvas.height / 3);
-        const upperLimit = honicGroundLevel - 150;
-        const lowerLimit = honicGroundLevel - this.honic.radius * 2;
+      const spacing = 200;
+      const honicGroundLevel = this.canvas.height - (this.canvas.height / 3);
+      const upperLimit = honicGroundLevel - 150;
+      const lowerLimit = honicGroundLevel - this.honic.radius * 2;
+  
+      while (this.rings.length < 5 || this.rings[this.rings.length - 1].x < this.canvas.width) {
         this.rings.push({
-          x: this.canvas.width + (i * 300),
+          x: this.rings.length > 0 ? this.rings[this.rings.length - 1].x + spacing : this.canvas.width + spacing,
           y: lowerLimit + (Math.random() * (upperLimit - lowerLimit)),
           outerRadius: 15,
           innerRadius: 8,
@@ -220,30 +216,34 @@ class Game {
       }
     }
   
-    update(ctx) {
-      this.rings.forEach(ring => {
+    update() {
+      const speedIncrease = this.canvas.width * 0.007;
+  
+      this.rings = this.rings.filter(ring => {
         if (!ring.collected && this.checkCollision(ring)) {
           ring.collected = true;
           this.collectSoundCallback();
           this.game.score += 10;
+          return false;
         }
+        return ring.x -= speedIncrease;
       });
   
-      this.shiftRings();
-      this.draw(ctx);
+      this.draw();
+      this.populateRings();
     }
   
-    draw(ctx) {
+    draw() {
       this.rings.forEach(ring => {
         if (!ring.collected) {
-          ctx.fillStyle = 'yellow';
-          ctx.beginPath();
-          ctx.arc(ring.x, ring.y, ring.outerRadius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.beginPath();
-          ctx.arc(ring.x, ring.y, ring.innerRadius, 0, Math.PI * 2, true);
-          ctx.fillStyle = '#87CEEB';
-          ctx.fill();
+          this.game.ctx.fillStyle = 'yellow';
+          this.game.ctx.beginPath();
+          this.game.ctx.arc(ring.x, ring.y, ring.outerRadius, 0, Math.PI * 2);
+          this.game.ctx.fill();
+          this.game.ctx.beginPath();
+          this.game.ctx.arc(ring.x, ring.y, ring.innerRadius, 0, Math.PI * 2, true);
+          this.game.ctx.fillStyle = '#87CEEB';
+          this.game.ctx.fill();
         }
       });
     }
@@ -254,14 +254,7 @@ class Game {
       let distance = Math.sqrt(dx * dx + dy * dy);
       return distance < this.honic.radius + ring.outerRadius && distance > ring.innerRadius - this.honic.radius;
     }
-  
-    shiftRings() {
-      this.rings.forEach(ring => ring.x -= this.canvas.width * 0.005);
-      if (this.rings.length < 5 || this.rings[this.rings.length - 1].x < this.canvas.width - 300) {
-        this.populateRings();
-      }
-    }
   }
   
-  // Initialize the game
-  new Game('gameCanvas');  
+  new Game('gameCanvas');
+  
