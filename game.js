@@ -87,7 +87,7 @@ class Honic {
             this.velocity = 0;
             this.onGround = true;
         }
-        this.rotationAngle += 0.2; // Increment the angle for the spinning effect
+        this.rotationAngle += 0.5; // Increment the angle for the spinning effect
         this.draw(ctx);
     }
 
@@ -125,7 +125,7 @@ class Honic {
         for (let i = 0; i < numberOfSpikes; i++) {
             const angle = startAngle + (i * angleIncrement);
 
-            const baseWidth = this.radius * 0.2; // Adjusted base width for thicker appearance
+            const baseWidth = this.radius * 0.01; // Adjusted base width for thicker appearance
             const base1X = this.x + Math.cos(angle - angleIncrement / 6) * (this.radius - baseWidth / 2);
             const base1Y = this.y + Math.sin(angle - angleIncrement / 6) * (this.radius - baseWidth / 2);
             const base2X = this.x + Math.cos(angle + angleIncrement / 6) * (this.radius - baseWidth / 2);
