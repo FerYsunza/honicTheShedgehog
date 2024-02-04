@@ -134,7 +134,8 @@ class RingManager {
             this.rings.push({
                 x: this.canvas.width + (i * 300),
                 y: this.canvas.height - (this.canvas.height / 3) - 150 - (Math.random() * 100),
-                radius: 10,
+                outerRadius: 15, // Increased size for outer radius
+                innerRadius: 8, // Inner radius to create the hole effect
                 collected: false,
             });
         }
@@ -155,9 +156,16 @@ class RingManager {
     draw(ctx) {
         this.rings.forEach(ring => {
             if (!ring.collected) {
+                // Draw the outer circle
                 ctx.fillStyle = 'yellow';
                 ctx.beginPath();
-                ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
+                ctx.arc(ring.x, ring.y, ring.outerRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw the inner circle to create the hole, simulating a donut shape
+                ctx.beginPath();
+                ctx.arc(ring.x, ring.y, ring.innerRadius, 0, Math.PI * 2, true);
+                ctx.fillStyle = '#87CEEB'; // You can match the background color if it's not black
                 ctx.fill();
             }
         });
@@ -167,7 +175,8 @@ class RingManager {
         let dx = ring.x - this.honic.x;
         let dy = ring.y - this.honic.y;
         let distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < this.honic.radius + ring.radius;
+        // Adjust collision detection to consider the outerRadius
+        return distance < this.honic.radius + ring.outerRadius && distance > ring.innerRadius - this.honic.radius;
     }
 
     shiftRings() {
@@ -177,6 +186,7 @@ class RingManager {
         }
     }
 }
+
 
 // Initialize the game
 new Game('gameCanvas');
