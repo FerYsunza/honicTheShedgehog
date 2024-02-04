@@ -197,9 +197,17 @@ class RingManager {
 
     populateRings() {
         for (let i = 0; i < 5; i++) {
+            // Calculate Honic's ground level
+            const honicGroundLevel = this.canvas.height - (this.canvas.height / 3);
+            // Keep the upper limit the same
+            const upperLimit = honicGroundLevel - 150;
+            // Adjust the lower limit to be closer to Honic's ground level
+            const lowerLimit = honicGroundLevel - this.honic.radius * 2; // Make some rings reachable without jumping
+
             this.rings.push({
                 x: this.canvas.width + (i * 300),
-                y: this.canvas.height - (this.canvas.height / 3) - 150 - (Math.random() * 100),
+                // Randomize the y position between the new upper and lower limits
+                y: lowerLimit + (Math.random() * (upperLimit - lowerLimit)),
                 outerRadius: 15, // Increased size for outer radius
                 innerRadius: 8, // Inner radius to create the hole effect
                 collected: false,
